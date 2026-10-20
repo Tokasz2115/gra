@@ -71,7 +71,7 @@ func _start_game() -> void:
 	player.died.connect(_on_player_died)
 
 	_update_hud()
-	_show_banner("Fala 1 - test aktualizacji")
+	_show_banner("Fala 1")
 
 
 func _process(delta: float) -> void:
