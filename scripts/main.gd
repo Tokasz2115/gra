@@ -10,8 +10,10 @@ const UpgradesScript := preload("res://scripts/upgrades.gd")
 
 const WAVE_LENGTH := 30.0   # sekundy na jedną falę
 const MAX_ENEMIES := 250
-const BG_COLOR := Color(0.05, 0.06, 0.09)
-const GRID_COLOR := Color(0.09, 0.11, 0.15)
+const BG_COLOR := Color(0.2, 0.33, 0.15)
+const TILE := 32            # rozmiar kafelka na ekranie (16 px grafiki x 2)
+const TILES_TEX := preload("res://assets/tiles/tiles.png")
+const DECOR_TEX := preload("res://assets/tiles/decor.png")
 
 var world: Node2D           # tu żyją gracz, wrogowie, pociski i gemy
 var player: Node2D
@@ -40,6 +42,7 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	randomize()
 	RenderingServer.set_default_clear_color(BG_COLOR)
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 
 	world = Node2D.new()
 	world.process_mode = Node.PROCESS_MODE_PAUSABLE
@@ -95,14 +98,14 @@ func _process(delta: float) -> void:
 
 
 func _spawn_enemy() -> void:
-	var kind := "basic"
+	var kind := "man" if randf() < 0.5 else "woman"
 	var roll := randf()
 	if wave >= 3 and roll < 0.12:
-		kind = "tank"
+		kind = "fat"
 	elif wave >= 2 and roll < 0.38:
-		kind = "fast"
+		kind = "child"
 
-	var half := get_viewport_rect().size * 0.5
+	var half := get_viewport_rect().size * 0.5 / PlayerScript.CAMERA_ZOOM
 	var pos := player.position + Vector2.from_angle(randf() * TAU) * (half.length() + 50.0)
 
 	var e = EnemyScript.new()
@@ -315,19 +318,64 @@ func _margin_box(parent: Control) -> MarginContainer:
 	return m
 
 
-# ---------- Tło: siatka wokół gracza ----------
+# ---------- Tło: nieskończona mapa z trawą, kwiatkami i drzewami ----------
+# Mapa nie jest zapisana nigdzie. Każdy kafelek ma "losowość" wyliczoną
+# ze swoich współrzędnych, więc ten sam fragment zawsze wygląda tak samo.
+
+func _hash(x: int, y: int, salt: int) -> int:
+	var h := x * 374761393 + y * 668265263 + salt * 1274126177
+	h = (h ^ (h >> 13)) * 1103515245
+	h = h ^ (h >> 16)
+	return h & 0x7fffffff
+
 
 func _draw() -> void:
 	if player == null or not is_instance_valid(player):
 		return
-	var cell := 64.0
-	var half := get_viewport_rect().size * 0.5 + Vector2(cell, cell)
+	var half := get_viewport_rect().size * 0.5 / PlayerScript.CAMERA_ZOOM
 	var c := player.position
-	var x := floorf((c.x - half.x) / cell) * cell
-	while x <= c.x + half.x:
-		draw_line(Vector2(x, c.y - half.y), Vector2(x, c.y + half.y), GRID_COLOR)
-		x += cell
-	var y := floorf((c.y - half.y) / cell) * cell
-	while y <= c.y + half.y:
-		draw_line(Vector2(c.x - half.x, y), Vector2(c.x + half.x, y), GRID_COLOR)
-		y += cell
+	var x0 := floori((c.x - half.x) / TILE) - 1
+	var x1 := floori((c.x + half.x) / TILE) + 1
+	var y0 := floori((c.y - half.y) / TILE) - 1
+	var y1 := floori((c.y + half.y) / TILE) + 1
+
+	# Trawa
+	for ty in range(y0, y1 + 1):
+		for tx in range(x0, x1 + 1):
+			var variant := _hash(tx, ty, 1) % 4
+			draw_texture_rect_region(
+				TILES_TEX,
+				Rect2(tx * TILE, ty * TILE, TILE, TILE),
+				Rect2(variant * 16, 0, 16, 16)
+			)
+
+	# Dekoracje (rząd po rzędzie, żeby niższe drzewa zasłaniały wyższe)
+	for ty in range(y0, y1 + 1):
+		for tx in range(x0, x1 + 1):
+			var r := _hash(tx, ty, 2) % 1000
+			var kind := -1
+			var near_start := absi(tx) <= 3 and absi(ty) <= 3
+			if r < 80:
+				kind = r % 5                      # kwiatki
+			elif r < 140:
+				kind = 5                          # kępka trawy
+			elif r < 143:
+				kind = 6                          # grzyb
+			elif not near_start:
+				if r < 153:
+					kind = 7                      # kamień
+				elif r < 168:
+					kind = 8                      # krzak
+				elif r < 188:
+					kind = 9                      # drzewo
+			if kind < 0:
+				continue
+			var jx := int(_hash(tx, ty, 3) % 13) - 6
+			var jy := int(_hash(tx, ty, 4) % 7) - 3
+			var left := tx * TILE + jx
+			var bottom := ty * TILE + TILE + jy
+			draw_texture_rect_region(
+				DECOR_TEX,
+				Rect2(left, bottom - 48, 32, 48),
+				Rect2(kind * 16, 0, 16, 24)
+			)

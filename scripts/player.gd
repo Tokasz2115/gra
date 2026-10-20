@@ -10,6 +10,9 @@ const ProjectileScript := preload("res://scripts/projectile.gd")
 const BLADE_RADIUS := 58.0
 const BLADE_HIT_RADIUS := 9.0
 const TARGET_RANGE := 480.0
+const SPRITE_SCALE := 2.0
+const CAMERA_ZOOM := 1.5   # przybliżenie kamery (większe = większe postacie)
+const SOLDIER_TEXTURE := preload("res://assets/sprites/soldier.png")
 
 var max_hp := 100.0
 var hp := 100.0
@@ -36,11 +39,22 @@ var _inv := 0.0
 var _face := Vector2.RIGHT
 var _blade_angle := 0.0
 var _dead := false
+var _anim := 0.0
+var _feet := 20.0
+var _sprite: Sprite2D
 
 
 func _ready() -> void:
 	add_to_group("player")
+	_sprite = Sprite2D.new()
+	_sprite.texture = SOLDIER_TEXTURE
+	_sprite.hframes = 2
+	_sprite.scale = Vector2(SPRITE_SCALE, SPRITE_SCALE)
+	_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	add_child(_sprite)
+	_feet = SOLDIER_TEXTURE.get_height() * SPRITE_SCALE * 0.5
 	var cam := Camera2D.new()
+	cam.zoom = Vector2(CAMERA_ZOOM, CAMERA_ZOOM)
 	add_child(cam)
 
 
@@ -57,12 +71,20 @@ func _process(delta: float) -> void:
 		dir = dir.normalized()
 	if dir != Vector2.ZERO:
 		_face = dir.normalized()
+		_anim += delta * move_speed / 12.0
+		_sprite.frame = int(_anim) % 2
+	else:
+		_sprite.frame = 0
+	if dir.x != 0.0:
+		_sprite.flip_h = dir.x < 0.0
 	position += dir * move_speed * delta
 
 	# Regeneracja i nietykalność po trafieniu
 	if regen > 0.0:
 		hp = minf(max_hp, hp + regen * delta)
 	_inv = maxf(0.0, _inv - delta)
+	var blink := _inv > 0.0 and int(_inv * 20.0) % 2 == 0
+	_sprite.modulate = Color(1.0, 0.45, 0.45) if blink else Color.WHITE
 
 	# Automatyczny atak
 	_fire_timer -= delta
@@ -161,7 +183,12 @@ func _fire(target: Node2D) -> void:
 
 
 func _draw() -> void:
-	# Ostrza
+	# Cień pod nogami
+	draw_set_transform(Vector2(0, _feet - 2.0), 0.0, Vector2(1.0, 0.35))
+	draw_circle(Vector2.ZERO, 12.0, Color(0, 0, 0, 0.3))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+	# Ostrza orbitalne
 	for i in blades:
 		var a := _blade_angle + i * TAU / blades
 		var c := Vector2.from_angle(a) * BLADE_RADIUS
@@ -170,8 +197,3 @@ func _draw() -> void:
 		draw_colored_polygon(PackedVector2Array([
 			c + out * 11.0, c + fwd * 6.0 - out * 6.0, c - fwd * 6.0 - out * 6.0,
 		]), Color(0.91, 0.93, 0.96))
-
-	# Postać
-	var blink := _inv > 0.0 and int(_inv * 20.0) % 2 == 0
-	draw_circle(Vector2.ZERO, 11.0, Color(0.94, 0.28, 0.44) if blink else Color(1.0, 0.71, 0.33))
-	draw_circle(_face * 5.0, 3.0, Color(0.05, 0.06, 0.09))

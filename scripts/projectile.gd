@@ -31,4 +31,6 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
-	draw_circle(Vector2.ZERO, 4.0, Color(1.0, 0.71, 0.33))
+	var dir := velocity.normalized()
+	draw_line(-dir * 9.0, Vector2.ZERO, Color(1.0, 0.85, 0.4), 3.0)
+	draw_circle(Vector2.ZERO, 2.5, Color(1.0, 0.95, 0.7))
