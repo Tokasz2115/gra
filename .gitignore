@@ -1,0 +1,10 @@
+# Godot 4
+.godot/
+*.translation
+
+# Eksporty
+export/
+*.exe
+*.pck
+*.apk
+*.aab
