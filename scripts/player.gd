@@ -13,6 +13,10 @@ const TARGET_RANGE := 480.0
 const SPRITE_SCALE := 2.0
 const CAMERA_ZOOM := 1.5   # przybliżenie kamery (większe = większe postacie)
 const SOLDIER_TEXTURE := preload("res://assets/sprites/soldier.png")
+const PISTOL_TEXTURE := preload("res://assets/sprites/pistol.png")
+const HAND := Vector2(0, 5)        # gdzie żołnierz trzyma pistolet (względem środka postaci)
+const GUN_REACH := 8.0             # jak daleko od ręki leży chwyt pistoletu
+const MUZZLE := 26.0               # odległość lufy od ręki
 
 var max_hp := 100.0
 var hp := 100.0
@@ -42,6 +46,9 @@ var _dead := false
 var _anim := 0.0
 var _feet := 20.0
 var _sprite: Sprite2D
+var _gun: Sprite2D
+var _aim := Vector2.RIGHT
+var _muzzle_flash := 0.0
 
 
 func _ready() -> void:
@@ -52,6 +59,12 @@ func _ready() -> void:
 	_sprite.scale = Vector2(SPRITE_SCALE, SPRITE_SCALE)
 	_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	add_child(_sprite)
+	_gun = Sprite2D.new()
+	_gun.texture = PISTOL_TEXTURE
+	_gun.scale = Vector2(SPRITE_SCALE, SPRITE_SCALE)
+	_gun.offset = Vector2(4, 0)     # obrót wokół chwytu
+	_gun.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	add_child(_gun)
 	_feet = SOLDIER_TEXTURE.get_height() * SPRITE_SCALE * 0.5
 	var cam := Camera2D.new()
 	cam.zoom = Vector2(CAMERA_ZOOM, CAMERA_ZOOM)
@@ -75,9 +88,20 @@ func _process(delta: float) -> void:
 		_sprite.frame = int(_anim) % 2
 	else:
 		_sprite.frame = 0
-	if dir.x != 0.0:
-		_sprite.flip_h = dir.x < 0.0
 	position += dir * move_speed * delta
+
+	# Celowanie: pistolet zawsze wskazuje najbliższego zombie
+	var target := _nearest_enemy(TARGET_RANGE)
+	if target != null:
+		_aim = (target.position - (position + HAND)).normalized()
+	elif dir != Vector2.ZERO:
+		_aim = dir.normalized()
+	if absf(_aim.x) > 0.1:
+		_sprite.flip_h = _aim.x < 0.0
+	_gun.position = HAND + _aim * GUN_REACH
+	_gun.rotation = _aim.angle()
+	_gun.flip_v = _aim.x < 0.0
+	_muzzle_flash = maxf(0.0, _muzzle_flash - delta)
 
 	# Regeneracja i nietykalność po trafieniu
 	if regen > 0.0:
@@ -89,7 +113,6 @@ func _process(delta: float) -> void:
 	# Automatyczny atak
 	_fire_timer -= delta
 	if _fire_timer <= 0.0:
-		var target := _nearest_enemy(TARGET_RANGE)
 		if target != null:
 			_fire(target)
 			_fire_timer = cooldown
@@ -171,15 +194,17 @@ func _nearest_enemy(max_dist: float) -> Node2D:
 
 
 func _fire(target: Node2D) -> void:
-	var base := (target.position - position).angle()
+	var origin := position + HAND + _aim * (GUN_REACH + MUZZLE)
+	var base := (target.position - origin).angle()
 	for i in proj_count:
 		var a := base + (i - (proj_count - 1) / 2.0) * 0.18
 		var p = ProjectileScript.new()
-		p.position = position
+		p.position = origin
 		p.velocity = Vector2.from_angle(a) * proj_speed
 		p.damage = damage
 		p.pierce = pierce
 		get_parent().add_child(p)
+	_muzzle_flash = 0.06
 
 
 func _draw() -> void:
@@ -187,6 +212,12 @@ func _draw() -> void:
 	draw_set_transform(Vector2(0, _feet - 2.0), 0.0, Vector2(1.0, 0.35))
 	draw_circle(Vector2.ZERO, 12.0, Color(0, 0, 0, 0.3))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+	# Błysk z lufy
+	if _muzzle_flash > 0.0:
+		var tip := HAND + _aim * (GUN_REACH + MUZZLE + 4.0)
+		draw_circle(tip, 7.0, Color(1.0, 0.8, 0.25, 0.9))
+		draw_circle(tip, 4.0, Color(1.0, 1.0, 0.85))
 
 	# Ostrza orbitalne
 	for i in blades:

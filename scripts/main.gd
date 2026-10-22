@@ -10,7 +10,7 @@ const UpgradesScript := preload("res://scripts/upgrades.gd")
 
 const WAVE_LENGTH := 30.0   # sekundy na jedną falę
 const MAX_ENEMIES := 250
-const BG_COLOR := Color(0.2, 0.33, 0.15)
+const BG_COLOR := Color(0.25, 0.42, 0.21)
 const TILE := 32            # rozmiar kafelka na ekranie (16 px grafiki x 2)
 const TILES_TEX := preload("res://assets/tiles/tiles.png")
 const DECOR_TEX := preload("res://assets/tiles/decor.png")
@@ -229,26 +229,35 @@ func _build_ui() -> void:
 	var layer := CanvasLayer.new()
 	add_child(layer)
 
-	# Pasek na górze: EXP, HP i statystyki
+	# Pasek na górze: EXP, HP i statystyki, na ciemnym tle, żeby napisy było widać
+	var bar_bg := PanelContainer.new()
+	bar_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var bg_style := StyleBoxFlat.new()
+	bg_style.bg_color = Color(0.03, 0.04, 0.06, 0.78)
+	bar_bg.add_theme_stylebox_override("panel", bg_style)
+	layer.add_child(bar_bg)
+	bar_bg.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+
 	var top := VBoxContainer.new()
 	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	layer.add_child(top)
-	top.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	bar_bg.add_child(top)
 
 	xp_bar = ProgressBar.new()
 	xp_bar.show_percentage = false
 	xp_bar.custom_minimum_size = Vector2(0, 12)
-	xp_bar.modulate = Color(0.3, 0.79, 0.94)
+	_style_bar(xp_bar, Color(0.1, 0.85, 1.0))
 	top.add_child(xp_bar)
 
 	hp_bar = ProgressBar.new()
 	hp_bar.show_percentage = false
-	hp_bar.custom_minimum_size = Vector2(0, 8)
-	hp_bar.modulate = Color(0.94, 0.28, 0.44)
+	hp_bar.custom_minimum_size = Vector2(0, 10)
+	_style_bar(hp_bar, Color(0.95, 0.22, 0.28))
 	top.add_child(hp_bar)
 
 	info_label = Label.new()
 	info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	info_label.add_theme_font_size_override("font_size", 18)
+	_outline(info_label, 5)
 	top.add_child(info_label)
 
 	# Środek ekranu: baner fali, pauza, wybór ulepszeń, koniec gry
@@ -259,7 +268,8 @@ func _build_ui() -> void:
 
 	banner_label = Label.new()
 	banner_label.add_theme_font_size_override("font_size", 48)
-	banner_label.add_theme_color_override("font_color", Color(1.0, 0.71, 0.33))
+	banner_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
+	_outline(banner_label, 12)
 	banner_label.modulate.a = 0.0
 	center.add_child(banner_label)
 
@@ -267,6 +277,7 @@ func _build_ui() -> void:
 	pause_label.text = "PAUZA\n(Esc, aby wznowić)"
 	pause_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	pause_label.add_theme_font_size_override("font_size", 36)
+	_outline(pause_label, 10)
 	pause_label.hide()
 	center.add_child(pause_label)
 
@@ -308,6 +319,22 @@ func _build_ui() -> void:
 	restart_button.text = "Zagraj ponownie"
 	restart_button.pressed.connect(_start_game)
 	over_box.add_child(restart_button)
+
+
+func _style_bar(bar: ProgressBar, fill_color: Color) -> void:
+	var bg := StyleBoxFlat.new()
+	bg.bg_color = Color(0.1, 0.11, 0.15)
+	bg.set_border_width_all(1)
+	bg.border_color = Color.BLACK
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = fill_color
+	bar.add_theme_stylebox_override("background", bg)
+	bar.add_theme_stylebox_override("fill", fill)
+
+
+func _outline(label: Label, size: int) -> void:
+	label.add_theme_color_override("font_outline_color", Color.BLACK)
+	label.add_theme_constant_override("outline_size", size)
 
 
 func _margin_box(parent: Control) -> MarginContainer:

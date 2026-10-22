@@ -79,18 +79,18 @@ def add_outline(im):
 
 SOLDIER = dict(
     head_w=6, head_h=6, torso_w=8, torso_h=7, leg_w=3, leg_h=5, leg_gap=2,
-    arm_w=2, arm_h=6, raised=False, rifle=True, hair="helmet",
+    arm_w=2, arm_h=6, raised=False, hair="helmet",
     skin=hx("e8b98a"), skin_sh=hx("c4936a"),
-    shirt=hx("557a3a"), shirt_sh=hx("3f5c2a"), sleeve=hx("4a6b32"),
-    pants=hx("3e4f2e"), pants_sh=hx("2f3d23"), boots=hx("2b2622"),
-    belt=hx("6b4a2a"), hair_c=hx("5a7a3e"), hair_hi=hx("86a864"),
+    shirt=hx("c2a867"), shirt_sh=hx("9c854d"), sleeve=hx("b39a5c"),
+    pants=hx("5b6a8a"), pants_sh=hx("46536e"), boots=hx("2b2622"),
+    belt=hx("6b4a2a"), hair_c=hx("4f6b3a"), hair_hi=hx("7c9a5a"),
     eye=hx("1a1a1a"), zombie=False, seed=1,
 )
 
 ZOMBIE_MAN = dict(
     head_w=6, head_h=6, torso_w=8, torso_h=7, leg_w=3, leg_h=5, leg_gap=2,
     arm_w=2, arm_h=7, raised=True, hair="short",
-    skin=hx("7fa05a"), skin_sh=hx("63824a"),
+    skin=hx("a8c46a"), skin_sh=hx("86a24f"),
     shirt=hx("56627a"), shirt_sh=hx("434d60"), sleeve=hx("56627a"),
     pants=hx("6a5642"), pants_sh=hx("52422f"), boots=hx("2b2622"),
     hair_c=hx("2e2118"), eye=EYE_ZOMBIE, zombie=True, torn=True, seed=11,
@@ -99,16 +99,16 @@ ZOMBIE_MAN = dict(
 ZOMBIE_WOMAN = dict(
     head_w=6, head_h=6, torso_w=6, torso_h=5, leg_w=2, leg_h=6, leg_gap=2,
     arm_w=2, arm_h=7, raised=True, hair="long", skirt=True,
-    skin=hx("93b26e"), skin_sh=hx("728f52"),
+    skin=hx("bcd27e"), skin_sh=hx("98ae5f"),
     shirt=hx("8e3b62"), shirt_sh=hx("6d2c4a"), sleeve=hx("8e3b62"),
-    pants=hx("93b26e"), pants_sh=hx("728f52"), boots=hx("3a2a2a"),
+    pants=hx("bcd27e"), pants_sh=hx("98ae5f"), boots=hx("3a2a2a"),
     hair_c=hx("6a3a2a"), eye=EYE_ZOMBIE, zombie=True, torn=True, seed=23,
 )
 
 ZOMBIE_CHILD = dict(
     head_w=6, head_h=6, torso_w=6, torso_h=4, leg_w=2, leg_h=4, leg_gap=2,
     arm_w=2, arm_h=5, raised=True, hair="tuft",
-    skin=hx("8ab063"), skin_sh=hx("6c9049"),
+    skin=hx("c0da7a"), skin_sh=hx("9cb85c"),
     shirt=hx("c7a23a"), shirt_sh=hx("a3841f"), sleeve=hx("c7a23a"),
     pants=hx("3d5a80"), pants_sh=hx("2e4560"), boots=hx("2b2622"),
     hair_c=hx("d9b44a"), eye=EYE_ZOMBIE, zombie=True, torn=True, seed=37,
@@ -117,7 +117,7 @@ ZOMBIE_CHILD = dict(
 ZOMBIE_FAT = dict(
     head_w=6, head_h=5, torso_w=12, torso_h=8, leg_w=3, leg_h=4, leg_gap=4,
     arm_w=3, arm_h=6, raised=True, hair="bald", belly=True,
-    skin=hx("6f9450"), skin_sh=hx("567a3c"),
+    skin=hx("9dbd62"), skin_sh=hx("7c9a49"),
     shirt=hx("d8d0a8"), shirt_sh=hx("b4ac84"), sleeve=hx("d8d0a8"),
     pants=hx("5a4a3a"), pants_sh=hx("45372a"), boots=hx("2b2622"),
     hair_c=hx("3a2a1f"), eye=EYE_ZOMBIE, zombie=True, torn=True, seed=53,
@@ -258,14 +258,26 @@ def save_character(name, spec):
     return sheet
 
 
+def make_pistol():
+    c = Canvas(14, 10)
+    c.rect(3, 2, 11, 4, GUN)
+    c.rect(3, 2, 11, 2, GUN_HI)
+    c.rect(4, 5, 6, 7, STOCK)
+    c.dot(7, 5, GUN)
+    im = add_outline(c.im)
+    im = im.crop(im.getbbox())
+    im.save(os.path.join(SPRITES, "pistol.png"))
+    return im
+
+
 # ------------------------------------------------------------ kafelki trawy
 
 def make_tiles():
     rnd = random.Random(7)
-    base = hx("568c3e")
-    dark = hx("4a7c36")
-    light = hx("62a046")
-    blade = hx("3f6e2e")
+    base = hx("3f6b36")
+    dark = hx("355c2e")
+    light = hx("4a7a3d")
+    blade = hx("2c4f27")
     soil = hx("7a6340")
     stone = hx("8e9298")
     sheet = Image.new("RGBA", (16 * 4, 16), (0, 0, 0, 0))
@@ -390,5 +402,6 @@ if __name__ == "__main__":
     }
     make_tiles()
     make_decor()
+    print("pistol", make_pistol().size)
     for n, s in sheets.items():
         print(n, "klatka", s.size[0] // 2, "x", s.size[1])
